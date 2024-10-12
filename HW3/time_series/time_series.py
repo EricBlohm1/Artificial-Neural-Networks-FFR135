@@ -59,13 +59,6 @@ def main():
     w_out = np.dot(dot1,x) 
     ##########################################################
 
-    #### Calculate output ####
-    O = np.zeros((T,N))
-    for t in range(0,T-1):
-        O[t+1] = np.dot(w_out.T,R[t+1])
-    ##########################
-    
-
     #### Calculate new R using test data and then using the output. ####
     R_predict = np.zeros((len(test_x[0])+predict_T,M))
     O_predict = np.zeros((len(test_x[0])+predict_T,N))
