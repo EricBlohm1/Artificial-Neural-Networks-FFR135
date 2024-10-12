@@ -64,7 +64,7 @@ def main():
     O_predict = np.zeros((len(test_x[0])+predict_T,N))
 
     # First create the R matrix and output using the 100 values from the test data
-    # then continue to predict these values from the test data
+    # then continue to predict the new values
     for t in range(0,len(test_x[0])+predict_T-1):
         r_next = np.zeros(M)
         r_t = R_predict[t].copy()
