@@ -72,6 +72,10 @@ def InitQ(Q,board):
             q = Q[board.tobytes()].copy()
         return Q , q
 
+def ChooseEqual(distribution): 
+    print("distr: ", distribution)
+    r = np.random.randint(0,len(distribution))
+    return distribution[r]
 
 def main():
 
@@ -107,15 +111,17 @@ def main():
                     r_p1 = 1
                 elif(winner == -1):
                     r_p1 = -1
-                #new position
-                action_new = BestMove(new_board1,Q_p1) # can return multiple of the same
-                print("nBestPos:" , np.argwhere(q1 == action_new).shape[1])
-                if np.argwhere(q1 == action_new).shape[0] > 1:
-                    bestpos = np.argwhere(q1 == action_new)[0]
-                else: 
-                     bestpos = np.argwhere(q1 == action_new)
+                #new position, may be a matrix with multiple points
+                action_new = BestMove(new_board1,Q_p1) 
+                if (isinstance(action_new,np.ndarray)):
+                    action_new = ChooseEqual(action_new)
+
+
+                bestpos = np.argwhere(Q_p1[board.tobytes()] == action_new)
+                if (isinstance(bestpos,np.ndarray)):
+                    bestpos = ChooseEqual(bestpos)
                 
-                print("currentpos", current_pos1)
+
                 q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
                 board = new_board1.copy()
                 Q_p1[board.tobytes()] = q1
@@ -123,9 +129,12 @@ def main():
             
             else:
                 action_new = BestMove(new_board1,Q_p1) # can return multiple of the same
-                print("act t+1: ", action_new)
-                print("inside: ", np.argwhere(Q_p1[new_board1.tobytes()] == action_new))
-                bestpos = np.argwhere(Q_p1[new_board1.tobytes()] == action_new)[0]
+                if (isinstance(action_new,np.ndarray)):
+                    action_new = ChooseEqual(action_new)
+
+                bestpos = np.argwhere(Q_p1[board.tobytes()] == action_new)
+                if (isinstance(bestpos,np.ndarray)):
+                    bestpos = ChooseEqual(bestpos)
 
                 q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
                 
