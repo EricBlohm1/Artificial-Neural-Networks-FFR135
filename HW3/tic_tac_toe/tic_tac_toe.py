@@ -63,7 +63,15 @@ def CheckGameOver(board):
 
     return False,0
 
-        
+def InitQ(Q,board):
+        q = np.zeros((3,3))
+        if(len(Q) == 0):
+            
+            Q[board.tobytes()] = q
+        else:
+            q = Q[board.tobytes()].copy()
+        return Q , q
+
 
 def main():
 
@@ -76,52 +84,55 @@ def main():
     epsilon = 1
     decay_rate = 0.9
     alpha = 0.1
-    K = 1 #10**4
+    K =100 #10**4
 
     for k in range(0, K): 
         if(k % 100 == 0):
             epsilon *= decay_rate
         board = np.zeros((3,3))
 
+        Q_p1, q1 = InitQ(Q_p1,board)
+        Q_p2, q2 = InitQ(Q_p2,board)
 
-        if(len(Q_p1) == 0):
-            q1 = np.zeros((3,3))
-            Q_p1[board.tobytes()] = q1
-        else:
-            q1= Q_p1[board.tobytes()].copy()
-
-
-        if(len(Q_p2) == 0):
-            q2 = np.zeros((3,3))
-            Q_p2[board.tobytes()] = q2
-        else:
-            q2= Q_p2[board.tobytes()].copy()
 
         for t in range(0,9):
+            print("t",t)
             ### Player 1 ###
-            new_board, current_pos, action = MoveAgent(board, Q_p1,epsilon,p1) ## i have no clue why. Returns shape (array([ ...]), None) ??
-
-            print(f"new board:\n {new_board}, \nq1:\n {q1}")
+            new_board1, current_pos1, action1 = MoveAgent(board, Q_p1,epsilon,p1) ## i have no clue why. Returns shape (array([ ...]), None) ??
+            print(f"new board:\n {new_board1}, \nq1:\n {q1}")
             r_p1 = 0
-            gameOver, winner = CheckGameOver(new_board)
+            gameOver, winner = CheckGameOver(new_board1)
             if(gameOver):
                 if(winner == 1):
                     r_p1 = 1
                 elif(winner == -1):
                     r_p1 = -1
                 #new position
-                action_new = BestMove(new_board,Q_p1) # can return multiple of the same
-                bestpos = np.argwhere(q1 == action_new)[0]
-                print("currentpos", current_pos)
-                q1[current_pos[0]][current_pos[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos[0]][current_pos[1]])
-
+                action_new = BestMove(new_board1,Q_p1) # can return multiple of the same
+                print("nBestPos:" , np.argwhere(q1 == action_new).shape[1])
+                if np.argwhere(q1 == action_new).shape[0] > 1:
+                    bestpos = np.argwhere(q1 == action_new)[0]
+                else: 
+                     bestpos = np.argwhere(q1 == action_new)
+                
+                print("currentpos", current_pos1)
+                q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
+                board = new_board1.copy()
+                Q_p1[board.tobytes()] = q1
                 break
+            
+            else:
+                action_new = BestMove(new_board1,Q_p1) # can return multiple of the same
+                print("act t+1: ", action_new)
+                print("inside: ", np.argwhere(Q_p1[new_board1.tobytes()] == action_new))
+                bestpos = np.argwhere(Q_p1[new_board1.tobytes()] == action_new)[0]
+
+                q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
+                
+                board = new_board1.copy()
+                Q_p1[board.tobytes()] = q1
             #################
-            action_new = BestMove(new_board,Q_p1) # can return multiple of the same
-            bestpos = np.argwhere(q1 == action_new)[0]
-            q1[current_pos[0]][current_pos[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos[0]][current_pos[1]])
-            board = new_board
-            Q_p1[board.tobytes()] = q1
+
         #print(Q_p1)
 
 
