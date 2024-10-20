@@ -27,6 +27,8 @@ def BestMove(board,Q):
     if(0 in board):
         b = board.tobytes()
         if (b in Q):
+            if (isinstance(np.nanmax(Q[b]), np.ndarray)):
+                    return ChooseEqualProb(np.nanmax(Q[b]))
             return np.nanmax(Q[b])
     return 0
 
@@ -72,8 +74,7 @@ def InitQ(Q,board):
             q = Q[board.tobytes()].copy()
         return Q , q
 
-def ChooseEqual(distribution): 
-    print("distr: ", distribution)
+def ChooseEqualProb(distribution): 
     r = np.random.randint(0,len(distribution))
     return distribution[r]
 
@@ -88,7 +89,7 @@ def main():
     epsilon = 1
     decay_rate = 0.9
     alpha = 0.1
-    K =100 #10**4
+    K =3 #10**4
 
     for k in range(0, K): 
         if(k % 100 == 0):
@@ -98,50 +99,58 @@ def main():
         Q_p1, q1 = InitQ(Q_p1,board)
         Q_p2, q2 = InitQ(Q_p2,board)
 
-
-        for t in range(0,9):
+        # both players put 1 piece, and they should have the same number of moves. thus range 0,4
+        for t in range(0,5):
+            prev_state = board.copy()
             print("t",t)
             ### Player 1 ###
-            new_board1, current_pos1, action1 = MoveAgent(board, Q_p1,epsilon,p1) ## i have no clue why. Returns shape (array([ ...]), None) ??
-            print(f"new board:\n {new_board1}, \nq1:\n {q1}")
+            board, current_pos1, action1 = MoveAgent(board, Q_p1,epsilon,p1) 
+            #print(f"new board:\n {new_board}, \nq1:\n {q1}")
             r_p1 = 0
-            gameOver, winner = CheckGameOver(new_board1)
+            gameOver, winner = CheckGameOver(board)
             if(gameOver):
-                if(winner == 1):
+                if(winner == p1):
                     r_p1 = 1
-                elif(winner == -1):
+                elif(winner == p2):
                     r_p1 = -1
                 #new position, may be a matrix with multiple points
-                action_new = BestMove(new_board1,Q_p1) 
-                if (isinstance(action_new,np.ndarray)):
-                    action_new = ChooseEqual(action_new)
+                action_new = BestMove(board,Q_p1) 
 
-
-                bestpos = np.argwhere(Q_p1[board.tobytes()] == action_new)
+                bestpos = np.argwhere(q1 == action_new)
                 if (isinstance(bestpos,np.ndarray)):
-                    bestpos = ChooseEqual(bestpos)
+                    bestpos = ChooseEqualProb(bestpos)
                 
 
                 q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
-                board = new_board1.copy()
                 Q_p1[board.tobytes()] = q1
+                print(f"board:\n {board}, \nq1:\n {q1}")
                 break
             
             else:
-                action_new = BestMove(new_board1,Q_p1) # can return multiple of the same
-                if (isinstance(action_new,np.ndarray)):
-                    action_new = ChooseEqual(action_new)
+                action_new = BestMove(board,Q_p1) 
 
-                bestpos = np.argwhere(Q_p1[board.tobytes()] == action_new)
+                bestpos = np.argwhere(q1 == action_new)
                 if (isinstance(bestpos,np.ndarray)):
-                    bestpos = ChooseEqual(bestpos)
+                    bestpos = ChooseEqualProb(bestpos)
 
                 q1[current_pos1[0]][current_pos1[1]] += alpha*(r_p1+q1[bestpos[0]][bestpos[1]]-q1[current_pos1[0]][current_pos1[1]])
-                
-                board = new_board1.copy()
                 Q_p1[board.tobytes()] = q1
-            #################
 
+
+            ## Player 2 ##
+            board, current_pos2, action1 = MoveAgent(board, Q_p2,epsilon,p2)
+            r_p2 = 0
+            gameOver, winner = CheckGameOver(board)
+            if(gameOver):
+                if(winner == p2):
+                    r_p2 = 1
+                elif(winner == p1):
+                    r_p2 = -1
+            
+                
+            #################
+            print(f"board:\n {board}, \nq1:\n {q1}")
+            
         #print(Q_p1)
 
 
