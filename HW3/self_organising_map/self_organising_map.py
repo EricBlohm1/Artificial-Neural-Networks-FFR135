@@ -105,8 +105,7 @@ def main():
                for j in range(0,w.shape[1]):
                    r_i = np.array([i, j])
                    h = neighbourhood_function(r_i,r_i0,sigma)
-                   delta_w[i][j] = eta* h *(x-w[i][j])
-                
+                   delta_w[i][j] = eta* h *(x-w[i][j])    
             w += delta_w
         
     ### Plot after updates ###
