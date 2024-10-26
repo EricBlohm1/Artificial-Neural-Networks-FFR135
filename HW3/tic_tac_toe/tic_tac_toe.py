@@ -125,39 +125,35 @@ def main():
     epsilon = 1
     decay_rate = 0.95
     alpha = 0.1
-    K = 30000 #10**4
+    K = 100000 #100 000 => 88%
 
     freq_p1 = 0
     freq_p2 = 0
     freq_draw = 0
-    
-    n_gameover = 0
 
     draw_probabilities = []
+    win_p1_probabilities = []
+    win_p2_probabilities = []
     rounds = []
-    round_interval = 1000  # Calculate draw probability every 1000 rounds
+
+    round_interval = 1000  # Calculate draw probability every 100 rounds
 
     for k in range(0, K): 
-        if k > 10000:
-            if k % 100:
+        if k > 15000:
+            if k % 100 == 0:
                 epsilon *= decay_rate
-                #print("k: ", k, "Epsilon: ", epsilon)
 
         board = np.zeros((3,3))
         board_states = [board]
         actions = []
         ## PLayer 1 always start ##
         current_p = p1
-
         for t in range(0,9):
             if t != 0:
                 current_p *= -1
 
             ## Append board before we update state, the action retrieved corresponds to the "previous state" ##
-            ## Think of the state as a node, and actions as the out-going edge ##
-
-            #TODO Issure might be the way i use "board" and where i update it etc. 
-            
+            ## Think of the state as a node, and actions as the out-going edge ##       
             action = None
             if current_p == 1:
                 #action is the position of the step taken.
@@ -173,25 +169,22 @@ def main():
             r_p2 = 0
             gameOver, winner = CheckGameOver(board)
             if(gameOver):
-                n_gameover +=1
                 if(winner == p1):
                     r_p1 = 1
                     r_p2 = -1
-                    #reward with 1 and save to correct Q-table
+                    #reward with 1
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p1, alpha, r_p1, gameOver)
-                    #penalize with -1 and save to corretc Q-table
+                    #penalize with -1
                     UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, r_p2, gameOver)
-                    #print(f"Winner: {winner}")
                     freq_p1 +=1
 
                 elif(winner == p2):
                     r_p2 = 1
                     r_p1 = -1
-                    #reward with 1 and save to correct Q-table
+                    #reward with 1
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p2, alpha, r_p2, gameOver)
-                    #penalize with -1 and save to corretc Q-table
+                    #penalize with -1
                     UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, r_p1, gameOver)
-                    #print(f"Winner: {winner}")
                     freq_p2 +=1
                 else:
                     if current_p == p1:
@@ -203,38 +196,43 @@ def main():
                     freq_draw +=1
                 break
                 
+            ## Update tables each move even though no one has won
             if t > 1: 
                 if(current_p == p1):
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
+                    UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
                 elif(current_p == p2):
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
+                    UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
 
-            if k % round_interval == 0 and k != 0:
-                # Calculate the probability of a draw
-                draw_prob = freq_draw / (freq_p1 + freq_p2 + freq_draw)
-                draw_probabilities.append(draw_prob)
-                rounds.append(k)
+        ## Calculate probabilities, for plotting.
+        if k != 0 and k % round_interval == 0:
+            draw_prob = freq_draw / k
+            win_prob_p1 = freq_p1 / k
+            win_prob_p2 = freq_p2 / k
+            draw_probabilities.append(draw_prob)
+            win_p1_probabilities.append(win_prob_p1)
+            win_p2_probabilities.append(win_prob_p2)
+            rounds.append(k)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(np.array(rounds) / 1000, draw_probabilities, label="Draw probability")
+    plt.plot(np.array(rounds)/1000, draw_probabilities, label="Draw probability")
+    plt.plot(np.array(rounds)/1000, win_p1_probabilities, label="P1 win probability")
+    plt.plot(np.array(rounds)/1000, win_p2_probabilities, label="P2 win probability")
 
     plt.xlabel("Number of rounds x $10^3$")
-    plt.ylabel("Probability of draw")
+    plt.ylabel("Probability")
     plt.title("Learning to play Tic-Tac-Toe using Q-learning")
     plt.legend()
     plt.grid(True)
     plt.show()
 
-    board = np.zeros((3,3))
-    board[1][1] = 1
-    print(board)
-    print("Q: ", Q_p1[board.tobytes()])
     print(f"Frequency wins: p1 {freq_p1/K}, p2 {freq_p2/K}")
     print(f"Frequency draw:  {freq_draw/K}")
     print("sum: ", (freq_draw+freq_p1+freq_p2)/K)
     print(f"Length of dictionaries: Q1 {len(Q_p1)}, Q2 {len(Q_p2)}")
 
-    print(" K: ", K, "n_gameover: ", n_gameover)
+    print(" K: ", K)
 
             
 
