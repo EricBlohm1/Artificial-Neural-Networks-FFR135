@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def MoveAgent(board,Q,epsilon,p):
@@ -29,12 +30,13 @@ def BestMove(board,Q):
                     best_action = ChooseEqualProb(np.nanmax(Q[b]))
                     return np.argwhere(best_action == Q[b])
             return np.argwhere(np.nanmax(Q[b]) == Q[b])
-    return [0,0]
+    rand_pos = np.argwhere(board == 0)
+    return rand_pos
 
 #check if game over, and return which player won
 def CheckGameOver(board):
     ## check if any positions are open. 
-    if not any(0 in row for row in board):
+    if(0 not in board):
         return True, 0
 
     ## check horisontal
@@ -70,7 +72,7 @@ def CheckGameOver(board):
         return True, -1
     #######################
 
-    return False , 0
+    return False, 0
 
 
 def ChooseEqualProb(distribution): 
@@ -90,14 +92,13 @@ def UpdateQ(board, prev_state, action, Q, alpha, r_p, gameover):
     else:
         prev_tmp = np.zeros((3,3))
 
-    ##get best action ##
-    best_pos = BestMove(board,Q)
-    if(isinstance(best_pos,np.ndarray)):
-        best_pos = best_pos[np.random.randint(len(best_pos))]
-    #####################
-
     ## if not game over, include best action of new board. 
     if(not gameover):
+        ##get best action ##
+        best_pos = BestMove(board,Q)
+        if(isinstance(best_pos,np.ndarray)):
+            best_pos = best_pos[np.random.randint(len(best_pos))]
+
         prev_tmp[action[0]][action[1]] += alpha* ( r_p+ current_tmp[best_pos[0]][best_pos[1]] - prev_tmp[action[0]][action[1]])
     else:
         prev_tmp[action[0]][action[1]] += alpha* ( r_p - prev_tmp[action[0]][action[1]])
@@ -122,9 +123,9 @@ def main():
     Q_p1 = {}
     Q_p2 = {}
     epsilon = 1
-    decay_rate = 0.95
+    decay_rate = 0.99
     alpha = 0.1
-    K = 150 #10**4
+    K = 50000 #10**4
 
     freq_p1 = 0
     freq_p2 = 0
@@ -132,44 +133,36 @@ def main():
     
     n_gameover = 0
 
+    draw_probabilities = []
+    rounds = []
+    round_interval = 1000  # Calculate draw probability every 1000 rounds
+
     for k in range(0, K): 
-        #print("K: ",k)
-        if k > 100:
-            #if(k % 100 == 0):
-            epsilon *= decay_rate
-            #print("K: ",k)
-            #print("Epsilon ", epsilon)
+        if k > 10000:
+            if k % 100:
+                epsilon *= decay_rate
+                #print("k: ", k, "Epsilon: ", epsilon)
 
         board = np.zeros((3,3))
-
-        # To keep track of previous states and actions. Append the bytes of states.
         board_states = []
         actions = []
-
         ## PLayer 1 always start ##
         current_p = p1
-        
-        # one player gets one round more, ok??
+
         for t in range(0,9):
-            ### Change between players each time step ###
             if t != 0:
                 current_p *= -1
-            #############################################
 
             ## Append board before we update state, the action retrieved corresponds to the "previous state" ##
-            ## Think of the states as a node, and actions as the out-going edge ##
-
+            ## Think of the state as a node, and actions as the out-going edge ##
             board_states.append(board)
+            action = None
             if current_p == 1:
                 #action is the position of the step taken.
                 board, action = MoveAgent(board, Q_p1, epsilon, current_p) 
             elif current_p == -1:
                 #action is the position of the step taken.
-                board, action = MoveAgent(board, Q_p2, epsilon, current_p)     
-                
-            #print(f"step:\n {t} \nboard:\n {board} \naction1:\n {action} \ncurrent player:\n {current_p}")
-            #print("----------------------------")
-
+                board, action = MoveAgent(board, Q_p2, epsilon, current_p)               
             actions.append(action)
             #####################################################
 
@@ -187,7 +180,7 @@ def main():
                     UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, r_p2, gameOver)
                     #print(f"Winner: {winner}")
                     freq_p1 +=1
-                    break
+
                 elif(winner == p2):
                     r_p2 = 1
                     r_p1 = -1
@@ -197,8 +190,14 @@ def main():
                     UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, r_p1, gameOver)
                     #print(f"Winner: {winner}")
                     freq_p2 +=1
-                    break
-                freq_draw +=1
+                else:
+                    if current_p == p1:
+                        UpdateQ(board, board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
+                        UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
+                    elif current_p == p2:
+                        UpdateQ(board, board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
+                        UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
+                    freq_draw +=1
                 break
                 
             if t > 1: 
@@ -206,6 +205,22 @@ def main():
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
                 elif(current_p == p2):
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
+
+            if k % round_interval == 0 and k != 0:
+                # Calculate the probability of a draw
+                draw_prob = freq_draw / (freq_p1 + freq_p2 + freq_draw)
+                draw_probabilities.append(draw_prob)
+                rounds.append(k)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(np.array(rounds) / 1000, draw_probabilities, label="Draw probability")
+
+    plt.xlabel("Number of rounds x $10^3$")
+    plt.ylabel("Probability of draw")
+    plt.title("Learning to play Tic-Tac-Toe using Q-learning")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
 
     #print("Q: ", Q_p1)
     print(f"Frequency wins: p1 {freq_p1/K}, p2 {freq_p2/K}")
