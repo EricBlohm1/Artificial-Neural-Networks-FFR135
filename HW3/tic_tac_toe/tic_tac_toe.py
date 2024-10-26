@@ -83,12 +83,12 @@ def ChooseEqualProb(distribution):
 #terminate states whether or not to use the "max action term". Prev state refers to state at t-2
 def UpdateQ(board, prev_state, action, Q, alpha, r_p, gameover):
     if board.tobytes() in Q:
-        current_tmp = Q[board.tobytes()].copy()
+        current_tmp = Q[board.tobytes()]
     else:
         current_tmp = np.zeros((3,3))
 
     if prev_state.tobytes() in Q:
-        prev_tmp = Q[prev_state.tobytes()].copy()
+        prev_tmp = Q[prev_state.tobytes()]
     else:
         prev_tmp = np.zeros((3,3))
 
@@ -123,9 +123,9 @@ def main():
     Q_p1 = {}
     Q_p2 = {}
     epsilon = 1
-    decay_rate = 0.99
+    decay_rate = 0.95
     alpha = 0.1
-    K = 50000 #10**4
+    K = 30000 #10**4
 
     freq_p1 = 0
     freq_p2 = 0
@@ -144,7 +144,7 @@ def main():
                 #print("k: ", k, "Epsilon: ", epsilon)
 
         board = np.zeros((3,3))
-        board_states = []
+        board_states = [board]
         actions = []
         ## PLayer 1 always start ##
         current_p = p1
@@ -155,7 +155,9 @@ def main():
 
             ## Append board before we update state, the action retrieved corresponds to the "previous state" ##
             ## Think of the state as a node, and actions as the out-going edge ##
-            board_states.append(board)
+
+            #TODO Issure might be the way i use "board" and where i update it etc. 
+            
             action = None
             if current_p == 1:
                 #action is the position of the step taken.
@@ -164,6 +166,7 @@ def main():
                 #action is the position of the step taken.
                 board, action = MoveAgent(board, Q_p2, epsilon, current_p)               
             actions.append(action)
+            board_states.append(board)
             #####################################################
 
             r_p1 = 0
@@ -222,7 +225,10 @@ def main():
     plt.grid(True)
     plt.show()
 
-    #print("Q: ", Q_p1)
+    board = np.zeros((3,3))
+    board[1][1] = 1
+    print(board)
+    print("Q: ", Q_p1[board.tobytes()])
     print(f"Frequency wins: p1 {freq_p1/K}, p2 {freq_p2/K}")
     print(f"Frequency draw:  {freq_draw/K}")
     print("sum: ", (freq_draw+freq_p1+freq_p2)/K)
