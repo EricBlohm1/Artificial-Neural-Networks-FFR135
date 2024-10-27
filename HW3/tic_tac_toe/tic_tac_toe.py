@@ -114,6 +114,8 @@ def setNan(board,q):
                 q[i][j] = np.nan
     return q
 
+
+##TODO STates not correct when updating
 def main():
 
     #### Set parameters ####
@@ -123,9 +125,9 @@ def main():
     Q_p1 = {}
     Q_p2 = {}
     epsilon = 1
-    decay_rate = 0.95
+    decay_rate = 0.9
     alpha = 0.1
-    K = 100000 #100 000 => 88%
+    K = 30000 #100 000 => 88%
 
     freq_p1 = 0
     freq_p2 = 0
@@ -139,7 +141,7 @@ def main():
     round_interval = 1000  # Calculate draw probability every 100 rounds
 
     for k in range(0, K): 
-        if k > 15000:
+        if k > 10000:
             if k % 100 == 0:
                 epsilon *= decay_rate
 
@@ -200,10 +202,10 @@ def main():
             if t > 1: 
                 if(current_p == p1):
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
-                    UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
+                    #UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
                 elif(current_p == p2):
                     UpdateQ(board, board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
-                    UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
+                    #UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
 
         ## Calculate probabilities, for plotting.
         if k != 0 and k % round_interval == 0:
