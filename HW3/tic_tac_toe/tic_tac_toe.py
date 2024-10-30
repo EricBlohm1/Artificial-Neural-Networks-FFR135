@@ -148,7 +148,7 @@ def main():
         actions = []
         ## PLayer 1 always start ##
         current_p = p1
-        for t in range(0,10):
+        for t in range(0,9):
                 
             ## Append board before we update state, the action retrieved corresponds to the "previous state" ##
             ## Think of the state as a node, and actions as the out-going edge ##       

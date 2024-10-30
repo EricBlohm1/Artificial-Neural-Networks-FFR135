@@ -21,6 +21,7 @@ def BestMove(board,Q):
     if(0 in board):
         b = board.tobytes()
         if (b in Q):
+            #print("--------------\n Board and q_values")
             #print("board: ", board, "Q[b]: ", Q[b])
             action = np.nanmax(Q[b])
             pos = np.argwhere(action == Q[b])
@@ -31,7 +32,8 @@ def BestMove(board,Q):
                     return pos
             return pos
     rand_pos = np.argwhere(board == 0)
-    rand_pos = rand_pos[np.random.randint(rand_pos.shape[0])]
+    if(isinstance(rand_pos, np.ndarray)):
+        rand_pos = rand_pos[np.random.randint(rand_pos.shape[0])]
     return rand_pos
 
 #check if game over, and return which player won
@@ -81,15 +83,17 @@ def ChooseEqualProb(distribution):
     return distribution[r]
 
 
-#terminate states whether or not to use the "max action term". Prev state refers to state at t-2
+#terminate states whether or not to use the "max action term". Prev state refers to state at t-2 or t-1
 def UpdateQ(board, prev_state, action, Q, alpha, r_p, gameover):
-    if board.tobytes() in Q:
-        current_tmp = Q[board.tobytes()]
+    b = board.tobytes()
+    if b in Q:
+        current_tmp = Q[b]
     else:
         current_tmp = np.zeros((3,3))
-
-    if prev_state.tobytes() in Q:
-        prev_tmp = Q[prev_state.tobytes()]
+        
+    b_prev = prev_state.tobytes()
+    if b_prev in Q:
+        prev_tmp = Q[b_prev]
     else:
         prev_tmp = np.zeros((3,3))
 
@@ -97,12 +101,19 @@ def UpdateQ(board, prev_state, action, Q, alpha, r_p, gameover):
     if(not gameover):
         ##get best action ##
         best_pos = BestMove(board,Q)
-        prev_tmp[action[0]][action[1]] += alpha* ( r_p+ current_tmp[best_pos[0]][best_pos[1]] - prev_tmp[action[0]][action[1]])
+        #if b in Q:
+            #print(f"-----\nboard \n{board}\n Q[b]\n {Q[b]}\n best pos\n {best_pos}")
+        prev_tmp[action[0]][action[1]] += alpha* ( r_p + current_tmp[best_pos[0]][best_pos[1]] - prev_tmp[action[0]][action[1]])
     else:
+        #print("not game over")
         prev_tmp[action[0]][action[1]] += alpha* ( r_p - prev_tmp[action[0]][action[1]])
 
+    #print("-----\nin update Q")
+    #print("q vals:\n ",prev_tmp,"\nprev state\n",prev_state)
     prev_tmp = setNan(prev_state,prev_tmp)
-    Q[prev_state.tobytes()] = prev_tmp
+    #print("updated nan:\n ",prev_tmp)
+    Q[b_prev] = prev_tmp
+
     
 
 def setNan(board,q):
@@ -151,14 +162,17 @@ def main():
         gameOver = False
         t=0
         winner = 0
-        while not gameOver:
+        while(not gameOver):
+            #print("start: ", gameOver)
             if current_p == p1:
                 board, action = MoveAgent(board_states[t],Q_p1,epsilon,p1)
             elif current_p == p2:
                 board, action = MoveAgent(board_states[t],Q_p2,epsilon,p2)
 
             actions.append(action)
-            if t > 1:
+            gameOver,winner = CheckGameOver(board)
+            #print(action,board_states[t])
+            if t > 1 and (not gameOver):
                 if(current_p == p1):
                     UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver) 
                 elif(current_p == p2):
@@ -168,32 +182,35 @@ def main():
             ### board_states has one more state than actions. The +1 state will be the ending one
             board_states.append(board)
             
-            gameOver,winner = CheckGameOver(board)
             t+=1
             #dont increment or change player the final round.
             if not gameOver:
                 current_p *= -1
-
-        #print(board,"\n--\n", board_states[t])
         ### Update rewards ###
+
         if(winner == p1):
+                
+            #print("---\nWinner p1!: \n",board_states[t])
             r_p1 = 1
             r_p2 = -1
             #reward with 1
+            #print(f"Reward p1 {r_p1}, penalty p2 {r_p2}")
             UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, r_p1, gameOver)
             #penalize with -1
             UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, r_p2, gameOver)
             freq_p1 +=1
 
         elif(winner == p2):
+            #print("---\nWinner p2!: \n",board_states[t])
             r_p2 = 1
             r_p1 = -1
+            #print(f"Reward p2 {r_p2}, penalty p1 {r_p1}")
             #reward with 1
             UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, r_p2, gameOver)
             #penalize with -1
             UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p1, alpha, r_p1, gameOver)
             freq_p2 +=1
-        else:
+        elif winner==0:
             if current_p == p1:
                 UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
                 UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
@@ -208,6 +225,7 @@ def main():
             draw_prob = freq_draw / k
             win_prob_p1 = freq_p1 / k
             win_prob_p2 = freq_p2 / k
+            #print("draws: ", draw_prob)
             draw_probabilities.append(draw_prob)
             win_p1_probabilities.append(win_prob_p1)
             win_p2_probabilities.append(win_prob_p2)
@@ -225,6 +243,7 @@ def main():
 
     plt.xlabel("Number of rounds x $10^3$")
     plt.ylabel("Probability")
+    plt.ylim([0,1])
     plt.title("Learning to play Tic-Tac-Toe using Q-learning")
     plt.legend()
     plt.grid(True)
