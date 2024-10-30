@@ -123,7 +123,7 @@ def main():
     Q_p1 = {}
     Q_p2 = {}
     epsilon = 1
-    decay_rate = 0.9
+    decay_rate = 0.95
     alpha = 0.1
     K = 30000 #100 000 => 88%
 
@@ -148,64 +148,61 @@ def main():
         actions = []
         ## PLayer 1 always start ##
         current_p = p1
-        for t in range(0,10):
-                
-            ## Append board before we update state, the action retrieved corresponds to the "previous state" ##
-            ## Think of the state as a node, and actions as the out-going edge ##       
-            action = None
-            if current_p == 1:
-                #action is the position of the step taken.
-                board, action = MoveAgent(board, Q_p1, epsilon, current_p) 
-            elif current_p == -1:
-                #action is the position of the step taken.
-                board, action = MoveAgent(board, Q_p2, epsilon, current_p)               
+        gameOver = False
+        t=0
+        winner = 0
+        while not gameOver:
+            if current_p == p1:
+                board, action = MoveAgent(board_states[t],Q_p1,epsilon,p1)
+            elif current_p == p2:
+                board, action = MoveAgent(board_states[t],Q_p2,epsilon,p2)
+
             actions.append(action)
-            board_states.append(board)
-            #####################################################
-            #print("------------\n",t)
-            #print(board_states[t],"\n--\n", board_states[t-2])
-
-            r_p1 = 0
-            r_p2 = 0
-            gameOver, winner = CheckGameOver(board_states[t])
-            if(gameOver):
-                if(winner == p1):
-                    r_p1 = 1
-                    r_p2 = -1
-                    #reward with 1
-                    UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, r_p1, gameOver)
-                    #penalize with -1
-                    UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, r_p2, gameOver)
-                    freq_p1 +=1
-
-                elif(winner == p2):
-                    r_p2 = 1
-                    r_p1 = -1
-                    #reward with 1
-                    UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, r_p2, gameOver)
-                    #penalize with -1
-                    UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p1, alpha, r_p1, gameOver)
-                    freq_p2 +=1
-                else:
-                    if current_p == p1:
-                        UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
-                        UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
-                    elif current_p == p2:
-                        UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
-                        UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
-                    freq_draw +=1
-                break
-                
-            ## Update tables each move even though no one has won
-            if t > 1: 
+            if t > 1:
                 if(current_p == p1):
-                    UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
-                    #UpdateQ(board, board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
+                    UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver) 
                 elif(current_p == p2):
                     UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
-                    #UpdateQ(board, board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
 
-            current_p *= -1
+            #print("-----\n",board_states[t],actions[t])
+            ### board_states has one more state than actions. The +1 state will be the ending one
+            board_states.append(board)
+            
+            gameOver,winner = CheckGameOver(board)
+            t+=1
+            #dont increment or change player the final round.
+            if not gameOver:
+                current_p *= -1
+
+        #print(board,"\n--\n", board_states[t])
+        ### Update rewards ###
+        if(winner == p1):
+            r_p1 = 1
+            r_p2 = -1
+            #reward with 1
+            UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, r_p1, gameOver)
+            #penalize with -1
+            UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, r_p2, gameOver)
+            freq_p1 +=1
+
+        elif(winner == p2):
+            r_p2 = 1
+            r_p1 = -1
+            #reward with 1
+            UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, r_p2, gameOver)
+            #penalize with -1
+            UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p1, alpha, r_p1, gameOver)
+            freq_p2 +=1
+        else:
+            if current_p == p1:
+                UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p1, alpha, 0, gameOver)
+                UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p2, alpha, 0, gameOver)
+            elif current_p == p2:
+                UpdateQ(board_states[t], board_states[t-2], actions[t-2], Q_p2, alpha, 0, gameOver)
+                UpdateQ(board_states[t], board_states[t-1], actions[t-1], Q_p1, alpha, 0, gameOver)
+            freq_draw +=1
+        ######################
+
         ## Calculate probabilities, for plotting.
         if k != 0 and k % round_interval == 0:
             draw_prob = freq_draw / k
@@ -215,6 +212,11 @@ def main():
             win_p1_probabilities.append(win_prob_p1)
             win_p2_probabilities.append(win_prob_p2)
             rounds.append(k)
+
+    board = np.zeros((3,3))
+    b= board.tobytes()
+    print(Q_p1[b])
+    print(b in Q_p2)
 
     plt.figure(figsize=(10, 6))
     plt.plot(np.array(rounds)/1000, draw_probabilities, label="Draw probability")
